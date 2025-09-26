@@ -4,12 +4,12 @@ import { Input, Button, Progress } from "antd";
 import { updateAnswer, finishInterview } from "../store/candidateSlice";
 
 const QUESTIONS = [
-  { text: "Explain closures in JavaScript.", difficulty: "easy", time: 20 },
-  { text: "Explain virtual DOM in React.", difficulty: "easy", time: 20 },
+  { text: "What are closures in JavaScript?", difficulty: "easy", time: 20 },
+  { text: "Explain the virtual DOM in React.", difficulty: "easy", time: 20 },
   { text: "What are middleware functions in Node.js?", difficulty: "medium", time: 60 },
-  { text: "Explain how you’d optimize a React app.", difficulty: "medium", time: 60 },
+  { text: "How would you optimize a React app for performance?", difficulty: "medium", time: 60 },
   { text: "Design a scalable authentication system.", difficulty: "hard", time: 120 },
-  { text: "How does event loop work in Node.js?", difficulty: "hard", time: 120 }
+  { text: "Explain the Node.js event loop with an example.", difficulty: "hard", time: 120 }
 ];
 
 export default function ChatBox({ candidate }) {
@@ -20,6 +20,7 @@ export default function ChatBox({ candidate }) {
 
   const currentQ = QUESTIONS[qIndex];
 
+  // countdown timer
   useEffect(() => {
     if (timeLeft <= 0) {
       handleSubmit();
@@ -36,23 +37,38 @@ export default function ChatBox({ candidate }) {
       setQIndex(qIndex + 1);
       setTimeLeft(QUESTIONS[qIndex + 1].time);
     } else {
-      
-      const score = candidate.answers.reduce((s, ans) => s + (ans?.length > 10 ? 10 : 5), 0);
-      dispatch(finishInterview({ score, summary: "Completed interview." }));
+      // evaluate candidate (simple scoring logic)
+      const score = candidate.answers.reduce((s, ans) => {
+        if (!ans) return s;
+        return s + (ans.split(" ").length > 5 ? 10 : 5); // length-based scoring
+      }, 0);
+      const summary = score > 40 ? "Strong candidate with solid answers." : "Needs improvement.";
+      dispatch(finishInterview({ score, summary }));
     }
   };
 
   return (
-    <div>
+    <div style={{ maxWidth: "600px" }}>
       <h3>Question {qIndex + 1} / {QUESTIONS.length}</h3>
       <p><b>{currentQ.text}</b></p>
-      <Progress percent={(timeLeft / currentQ.time) * 100} showInfo={false}/>
+      <Progress 
+        percent={(timeLeft / currentQ.time) * 100} 
+        strokeColor="green" 
+        showInfo={false} 
+      />
       <Input.TextArea
+        rows={4}
+        placeholder="Type your answer here..."
         value={answer}
         onChange={(e) => setAnswer(e.target.value)}
-        rows={3}
       />
-      <Button onClick={handleSubmit} type="primary" style={{ marginTop: 8 }}>Submit</Button>
+      <Button 
+        type="primary" 
+        onClick={handleSubmit} 
+        style={{ marginTop: 10 }}
+      >
+        Submit
+      </Button>
     </div>
   );
 }
