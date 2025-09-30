@@ -1,12 +1,8 @@
-// utils/aiQuestionGenerator.js
 
 import { v4 as uuidv4 } from 'uuid';
 import { QUESTION_DIFFICULTY } from '../types';
 import { generateQuestionWithHF, evaluateAnswerWithHF, generateSummaryWithHF } from './huggingFaceService';
 
-/**
- * Question templates organized by difficulty and topic
- */
 const QUESTION_TEMPLATES = {
   [QUESTION_DIFFICULTY.EASY]: {
     react: [
@@ -106,9 +102,7 @@ const QUESTION_TEMPLATES = {
   }
 };
 
-/**
- * Keywords for answer evaluation
- */
+
 const KEYWORD_WEIGHTS = {
   react: {
     high: ['component', 'state', 'props', 'jsx', 'hook', 'virtual dom', 'lifecycle', 'context'],
@@ -128,20 +122,19 @@ const KEYWORD_WEIGHTS = {
 };
 
 /**
- * Generate a random question based on difficulty and topic
+ 
  * @param {string} difficulty - The difficulty level (easy, medium, hard)
  * @param {string} topic - The topic area (react, javascript, general)
  * @returns {object} - The generated question object
  */
 export const generateQuestion = async (difficulty = QUESTION_DIFFICULTY.EASY, topic = 'react') => {
   try {
-    // Try Hugging Face API first
+
     const hfQuestion = await generateQuestionWithHF(topic, difficulty);
     return hfQuestion;
   } catch (error) {
     console.warn('Hugging Face question generation failed, using fallback:', error);
 
-    // Fallback to template-based questions
     const templates = QUESTION_TEMPLATES[difficulty]?.[topic] || QUESTION_TEMPLATES[difficulty]?.react || [];
 
     if (templates.length === 0) {
@@ -171,7 +164,7 @@ export const generateQuestion = async (difficulty = QUESTION_DIFFICULTY.EASY, to
 };
 
 /**
- * Evaluate an answer and provide a score and feedback
+ 
  * @param {string} answer - The candidate's answer
  * @param {object} question - The question object
  * @returns {object} - Score and feedback object
@@ -184,7 +177,6 @@ export const evaluateAnswer = async (answer, question) => {
   } catch (error) {
     console.warn('Hugging Face answer evaluation failed, using fallback:', error);
 
-    // Fallback to basic evaluation
     if (!answer || answer.trim().length < 10) {
       return {
         score: 2,
@@ -198,7 +190,6 @@ export const evaluateAnswer = async (answer, question) => {
     const topic = question.category || 'general';
     const keywords = KEYWORD_WEIGHTS[topic] || KEYWORD_WEIGHTS.general;
 
-    // Count keyword matches
     let highMatches = 0;
     let mediumMatches = 0;
     let lowMatches = 0;
@@ -215,12 +206,10 @@ export const evaluateAnswer = async (answer, question) => {
       if (normalizedAnswer.includes(keyword)) lowMatches++;
     });
 
-    // Calculate score based on keyword matches and answer length
     const baseScore = (highMatches * 3) + (mediumMatches * 2) + (lowMatches * 1);
-    const lengthBonus = Math.min(answer.length / 100, 2); // Up to 2 points for length
+    const lengthBonus = Math.min(answer.length / 100, 2); 
     const totalScore = Math.min(baseScore + lengthBonus, 10);
 
-    // Generate feedback based on score and content
     let feedback = '';
     if (totalScore >= 8) {
       feedback = 'Excellent answer! Demonstrates strong understanding of the topic.';
@@ -251,10 +240,9 @@ export const evaluateAnswer = async (answer, question) => {
  * @returns {Array} - Array of question objects
  */
 export const generateInterviewQuestions = async (totalQuestions = 6) => {
-  const questionsPerDifficulty = Math.floor(totalQuestions / 3); // 2 per difficulty level
+  const questionsPerDifficulty = Math.floor(totalQuestions / 3); 
   const questions = [];
 
-  // Define the expected question order: Easy, Medium, Hard
   const questionOrder = [];
   for (let i = 0; i < questionsPerDifficulty && questionOrder.length < totalQuestions; i++) {
     questionOrder.push({ difficulty: QUESTION_DIFFICULTY.EASY, topic: 'react' });
@@ -266,90 +254,61 @@ export const generateInterviewQuestions = async (totalQuestions = 6) => {
     questionOrder.push({ difficulty: QUESTION_DIFFICULTY.HARD, topic: 'general' });
   }
 
+  console.log('Question order before generation:', questionOrder);
+  console.log('Questions per difficulty should be:', questionsPerDifficulty);
+
   try {
-    // Generate questions using Hugging Face API in proper order
+   
     const aiQuestions = [];
 
     for (const { difficulty, topic } of questionOrder) {
       try {
         const question = await generateQuestion(difficulty, topic);
         aiQuestions.push(question);
+        console.log(`Generated ${difficulty} question:`, question.question.substring(0, 50) + '...');
       } catch (error) {
         console.warn(`Failed to generate ${difficulty} ${topic} question:`, error);
-      }
-    }
-
-    // Use AI questions if we got some, otherwise use all templates
-    if (aiQuestions.length > 0) {
-      // Remove duplicates from AI questions
-      const uniqueAIQuestions = removeDuplicateQuestions(aiQuestions);
-      // Use AI questions up to the total needed
-      questions.push(...uniqueAIQuestions.slice(0, totalQuestions));
-    }
-
-    // If we don't have enough questions from AI, fill with templates in proper order
-    if (questions.length < totalQuestions) {
-      const remaining = totalQuestions - questions.length;
-
-      for (let i = 0; i < remaining; i++) {
-        const questionIndex = questions.length + i;
-        const { difficulty, topic } = questionOrder[questionIndex] || questionOrder[questionIndex % questionOrder.length];
-
+       
         const templates = QUESTION_TEMPLATES[difficulty]?.[topic] || QUESTION_TEMPLATES[difficulty]?.react || [];
         if (templates.length > 0) {
-          // Find a unique question from templates
-          const availableTemplates = templates.filter(template =>
-            !questions.some(existing => existing.question === template)
-          );
-
-          if (availableTemplates.length > 0) {
-            const randomIndex = Math.floor(Math.random() * availableTemplates.length);
-            const questionText = availableTemplates[randomIndex];
-
-            questions.push({
-              id: uuidv4(),
-              question: questionText,
-              difficulty,
-              type: 'technical',
-              topic,
-              category: topic,
-              generatedBy: 'template'
-            });
-          } else {
-            // If all templates are used, use a fallback
-            questions.push({
-              id: uuidv4(),
-              question: `Tell me about your experience with ${topic} development.`,
-              difficulty,
-              type: 'general',
-              topic,
-              category: topic,
-              generatedBy: 'fallback'
-            });
-          }
+          const randomIndex = Math.floor(Math.random() * templates.length);
+          const questionText = templates[randomIndex];
+          aiQuestions.push({
+            id: uuidv4(),
+            question: questionText,
+            difficulty,
+            type: 'technical',
+            topic,
+            category: topic,
+            generatedBy: 'template-fallback'
+          });
         }
       }
     }
 
-    return questions;
-  } catch (error) {
-    console.error('Error in generateInterviewQuestions:', error);
+    console.log('AI questions generated:', aiQuestions.length, aiQuestions.map(q => ({ difficulty: q.difficulty, topic: q.topic })));
 
-    // Complete fallback to template questions in proper order
+    
     const questions = [];
+    const questionsPerDifficulty = Math.floor(totalQuestions / 3);
+
     for (let i = 0; i < totalQuestions; i++) {
-      const { difficulty, topic } = questionOrder[i] || questionOrder[i % questionOrder.length];
+      const orderIndex = i % questionOrder.length;
+      const { difficulty, topic } = questionOrder[orderIndex];
 
-      const templates = QUESTION_TEMPLATES[difficulty]?.[topic] || QUESTION_TEMPLATES[difficulty]?.react || [];
-      if (templates.length > 0) {
-        // Find a unique question from templates
-        const availableTemplates = templates.filter(template =>
-          !questions.some(existing => existing.question === template)
-        );
+      const availableQuestions = aiQuestions.filter(q => q.difficulty === difficulty);
 
-        if (availableTemplates.length > 0) {
-          const randomIndex = Math.floor(Math.random() * availableTemplates.length);
-          const questionText = availableTemplates[randomIndex];
+      if (availableQuestions.length > 0) {
+       
+        const questionToUse = availableQuestions.shift(); // Remove from available pool
+        questions.push(questionToUse);
+        console.log(`Used AI ${difficulty} question for slot ${i + 1}`);
+      } else {
+       
+        const templates = QUESTION_TEMPLATES[difficulty]?.[topic] || QUESTION_TEMPLATES[difficulty]?.react || [];
+        if (templates.length > 0) {
+          const randomIndex = Math.floor(Math.random() * templates.length);
+          const questionText = templates[randomIndex];
 
           questions.push({
             id: uuidv4(),
@@ -360,18 +319,40 @@ export const generateInterviewQuestions = async (totalQuestions = 6) => {
             category: topic,
             generatedBy: 'template'
           });
-        } else {
-          // If all templates are used, use a fallback
-          questions.push({
-            id: uuidv4(),
-            question: `Tell me about your experience with ${topic} development.`,
-            difficulty,
-            type: 'general',
-            topic,
-            category: topic,
-            generatedBy: 'fallback'
-          });
+          console.log(`Used template ${difficulty} question for slot ${i + 1}`);
         }
+      }
+    }
+
+    console.log('Final questions before return:', questions.length, questions.map(q => ({ difficulty: q.difficulty, topic: q.topic })));
+    console.log('Difficulty breakdown:', {
+      easy: questions.filter(q => q.difficulty === QUESTION_DIFFICULTY.EASY).length,
+      medium: questions.filter(q => q.difficulty === QUESTION_DIFFICULTY.MEDIUM).length,
+      hard: questions.filter(q => q.difficulty === QUESTION_DIFFICULTY.HARD).length
+    });
+
+    return questions;
+  } catch (error) {
+    console.error('Error in generateInterviewQuestions:', error);
+
+    const questions = [];
+    for (let i = 0; i < totalQuestions; i++) {
+      const { difficulty, topic } = questionOrder[i] || questionOrder[i % questionOrder.length];
+
+      const templates = QUESTION_TEMPLATES[difficulty]?.[topic] || QUESTION_TEMPLATES[difficulty]?.react || [];
+      if (templates.length > 0) {
+        const randomIndex = Math.floor(Math.random() * templates.length);
+        const questionText = templates[randomIndex];
+
+        questions.push({
+          id: uuidv4(),
+          question: questionText,
+          difficulty,
+          type: 'technical',
+          topic,
+          category: topic,
+          generatedBy: 'template'
+        });
       }
     }
 
@@ -380,7 +361,7 @@ export const generateInterviewQuestions = async (totalQuestions = 6) => {
 };
 
 /**
- * Remove duplicate questions from an array
+ 
  * @param {Array} questions - Array of question objects
  * @returns {Array} - Array with unique questions
  */
@@ -404,13 +385,12 @@ const removeDuplicateQuestions = (questions) => {
  */
 export const generateInterviewSummary = async (answers, candidate) => {
   try {
-    // Try Hugging Face API first
+ 
     const hfSummary = await generateSummaryWithHF(answers, candidate);
     return hfSummary;
   } catch (error) {
     console.warn('Hugging Face summary generation failed, using fallback:', error);
 
-    // Fallback to basic summary generation
     const totalScore = answers.reduce((sum, answer) => sum + (answer.score || 0), 0);
     const averageScore = totalScore / answers.length;
 

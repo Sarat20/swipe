@@ -1,4 +1,4 @@
-// components/IntervieweeView.jsx
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -81,14 +81,14 @@ const IntervieweeView = () => {
     timerActive
   } = useSelector(state => state.interview);
 
-  // Auto-scroll to bottom of chat
+
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [questions, answers, currentPhase]);
 
-  // Timer effect - handle countdown and auto-submit
+  
   useEffect(() => {
     if (timerActive && timeRemaining > 0) {
       timerRef.current = setInterval(() => {
@@ -106,7 +106,7 @@ const IntervieweeView = () => {
     }
   }, [timerActive, timeRemaining, dispatch]);
 
-  // Auto-submit when time runs out
+
   useEffect(() => {
     if (timeRemaining === 0 && currentQuestion && (currentPhase === 'asking_question' || currentPhase === 'waiting_answer')) {
       handleTimeUp();
@@ -119,7 +119,7 @@ const IntervieweeView = () => {
 
   const handleResumeUpload = (file) => {
     setResumeFile(file);
-    return false; // Prevent default upload behavior
+    return false;
   };
 
   const handleParseResume = async () => {
@@ -170,10 +170,8 @@ const IntervieweeView = () => {
 
   const startInterview = async () => {
     try {
-      // Reset interview state before starting new interview
+     
       dispatch(resetInterview());
-
-      // Generate AI-powered questions using Hugging Face API
       const interviewQuestions = await generateInterviewQuestions(6);
 
       if (interviewQuestions.length === 0) {
@@ -181,12 +179,10 @@ const IntervieweeView = () => {
       }
 
       console.log('Generated questions:', interviewQuestions.length, interviewQuestions);
-
-      // Add all questions to Redux state
       interviewQuestions.forEach(q => dispatch(addQuestion(q)));
 
       if (interviewQuestions.length > 0) {
-        // Set the first question as current
+  
         dispatch(setCurrentQuestion(interviewQuestions[0]));
         dispatch(setCurrentPhase('asking_question'));
         dispatch(startTimer());
@@ -205,7 +201,7 @@ const IntervieweeView = () => {
     if (!answerText.trim()) return;
 
     try {
-      // Evaluate the answer using AI system (now async)
+    
       const evaluation = await evaluateAnswer(answerText, currentQuestion);
 
       dispatch(addAnswer({
@@ -224,14 +220,14 @@ const IntervieweeView = () => {
       dispatch(stopTimer());
 
       if (questions.length > answers.length) {
-        // Move to next question
+        
         dispatch(nextQuestion());
         setTimeout(() => {
-          dispatch(setCurrentPhase('asking_question')); // Show next question
+          dispatch(setCurrentPhase('asking_question')); 
           dispatch(startTimer());
         }, 1000);
       } else {
-        // Interview completed
+       
         completeInterview();
       }
 
@@ -240,7 +236,7 @@ const IntervieweeView = () => {
       console.error('Error submitting answer:', error);
       messageApi.error('Failed to evaluate answer. Please try again.');
 
-      // Still proceed with basic evaluation
+    
       dispatch(addAnswer({
         id: uuidv4(),
         questionId: currentQuestion.id,
@@ -271,10 +267,10 @@ const IntervieweeView = () => {
 
   const completeInterview = async () => {
     try {
-      const allAnswers = [...answers]; // Get current answers
+      const allAnswers = [...answers];
       const totalScore = allAnswers.reduce((sum, answer) => sum + (answer.score || 0), 0);
 
-      // Create a fallback candidate object if currentCandidate is not available
+     
       const candidateForSummary = currentCandidate || {
         name: 'Anonymous Candidate',
         email: 'anonymous@example.com'
@@ -289,12 +285,11 @@ const IntervieweeView = () => {
             totalScore,
             summary,
             endTime: new Date().toISOString(),
-            questions: questions, // Save questions for dashboard
-            answers: allAnswers   // Save answers for dashboard
+            questions: questions, 
+            answers: allAnswers  
           }
         }));
 
-        // Debug: Log the updated candidate data
         console.log('Interview completed - candidate data saved:', {
           candidateId: currentCandidateId,
           totalScore,
@@ -304,7 +299,6 @@ const IntervieweeView = () => {
           status: 'completed'
         });
 
-        // Debug: Check Redux state after saving
         setTimeout(() => {
           console.log('Redux state after interview completion:', {
             candidates: candidates.length,
@@ -325,11 +319,11 @@ const IntervieweeView = () => {
       console.error('Error completing interview:', error);
       messageApi.error('Failed to complete interview evaluation. Please check results manually.');
 
-      // Still show completion with basic scoring
+
       const allAnswers = [...answers];
       const totalScore = allAnswers.reduce((sum, answer) => sum + (answer.score || 0), 0);
 
-      // Use fallback candidate for summary even in error case
+  
       const fallbackCandidate = currentCandidate || {
         name: 'Anonymous Candidate',
         email: 'anonymous@example.com'
@@ -345,16 +339,15 @@ const IntervieweeView = () => {
               totalScore,
               summary,
               endTime: new Date().toISOString(),
-              questions: questions, // Save questions for dashboard
-              answers: allAnswers   // Save answers for dashboard
+              questions: questions,
+              answers: allAnswers  
             }
           }));
 
-          // Status is now updated automatically in the reducer
         }
       } catch (summaryError) {
         console.warn('Summary generation also failed:', summaryError);
-        // Use basic summary as final fallback
+        
         if (currentCandidate) {
           dispatch(updateCandidateInterview({
             candidateId: currentCandidateId,
@@ -362,12 +355,12 @@ const IntervieweeView = () => {
               totalScore,
               summary: 'Interview completed successfully.',
               endTime: new Date().toISOString(),
-              questions: questions, // Save questions for dashboard
-              answers: allAnswers   // Save answers for dashboard
+              questions: questions, 
+              answers: allAnswers   
             }
           }));
 
-          // Status is now updated automatically in the reducer
+          
         }
       }
 
@@ -384,7 +377,7 @@ const IntervieweeView = () => {
       }));
       dispatch(clearMissingField(field));
 
-      // Don't auto-start interview anymore - let the button handler do it
+     
     }
   };
 
@@ -406,9 +399,9 @@ const IntervieweeView = () => {
   };
 
   const getScoreColor = (score) => {
-    if (score >= 80) return '#52c41a'; // Green for excellent
-    if (score >= 60) return '#faad14'; // Orange for good
-    return '#ff4d4f'; // Red for needs improvement
+    if (score >= 80) return '#52c41a'; 
+    if (score >= 60) return '#faad14'; 
+    return '#ff4d4f'; 
   };
 
   return (

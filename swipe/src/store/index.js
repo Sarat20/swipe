@@ -1,4 +1,4 @@
-// store/index.js
+
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { persistStore, persistReducer } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
@@ -14,7 +14,7 @@ const persistConfig = {
   key: 'root',
   storage,
   version: 1,
-  // Ensure candidate data is properly persisted
+ 
   whitelist: ['candidate', 'interview'],
 };
 
